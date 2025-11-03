@@ -90,7 +90,7 @@ jobs:
           exit 0
 
       - name: Get issue details
-        if: steps.validate.outputs.no_issue == 'false'
+        if: steps.validate.outputs.no_issue == 'false' && steps.check_issue.outputs.exists == 'true'
         id: issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
