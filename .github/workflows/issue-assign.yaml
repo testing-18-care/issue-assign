@@ -68,10 +68,17 @@ jobs:
 
           echo "Checking if issue #$ISSUE_NUMBER exists..."
           if gh api "repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            exists=true
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            exists=false
           fi
+
+          # Print to logs for debugging
+          echo "Issue existence check result: $exists"
+
+          # Export to GitHub Actions output
+          echo "exists=$exists" >> $GITHUB_OUTPUT
+
 
       - name: Close PR if issue does not exist
         if: steps.check_issue.outputs.exists == 'false'
