@@ -31,47 +31,43 @@ jobs:
       #       }
       #       core.setOutput("is_core", "false");
 
-      # - name: Validate linked issue
-      #   #if: steps.check-core.outputs.is_core == 'false'
-      #   id: validate
+      - name: Validate linked issue
+        #if: steps.check-core.outputs.is_core == 'false'
+        id: validate
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+
+          # Look for "Fixes #<number>", "Closes #<number>", or "Resolves #<number>"
+          ISSUE_REF=$(echo "$PR_BODY" | grep -Eo '(Fixes|Closes|Resolves)\s*#([0-9]+)' | head -n1 || true)
+
+          if [ -z "$ISSUE_REF" ]; then
+            echo "no_issue=true" >> $GITHUB_OUTPUT
+            echo "there is no issue"
+          else
+            ISSUE_NUMBER=$(echo "$ISSUE_REF" | grep -Eo '[0-9]+')
+            echo "no_issue=false" >> $GITHUB_OUTPUT
+            echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+            echo "issue_url=https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+            ehco "there is issue"
+          fi
+
+      # - name: Get linked issues
+      #   id: get_issues
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #   run: |
-      #     PR_BODY="${{ github.event.pull_request.body }}"
+      #       PR=${{ github.event.pull_request.number }}
 
-      #     # Look for "Fixes #<number>", "Closes #<number>", or "Resolves #<number>"
-      #     ISSUE_REF=$(echo "$PR_BODY" | grep -Eo '(Fixes|Closes|Resolves)\s*#([0-9]+)' | head -n1 || true)
+      #       ISSUES=$(gh api \
+      #       repos/${{ github.repository }}/pulls/$PR \
+      #       --jq '.linked_issues.nodes[].number')
 
-      #     if [ -z "$ISSUE_REF" ]; then
-      #       echo "no_issue=true" >> $GITHUB_OUTPUT
-      #     else
-      #       ISSUE_NUMBER=$(echo "$ISSUE_REF" | grep -Eo '[0-9]+')
-      #       echo "no_issue=false" >> $GITHUB_OUTPUT
-      #       echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-      #       echo "issue_url=https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-      #     fi
-
-      - name: Get linked issues
-        id: get_issues
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-            PR=${{ github.event.pull_request.number }}
-
-            ISSUES=$(gh api \
-            repos/${{ github.repository }}/pulls/$PR \
-            --jq '.linked_issues.nodes[].number')
-
-            if [ -z "$ISSUES" ]; then
-              echo "count=0" >> $GITHUB_OUTPUT
-            else
-              echo "count=$(echo "$ISSUES" | wc -w)" >> $GITHUB_OUTPUT
-              echo "issues=$ISSUES" >> $GITHUB_OUTPUT
-            fi
-
-      - name: Print issue numbers
-        run: |
-          echo "Linked issue count: ${{ steps.get_issues.outputs.count }}"
-          echo "Linked issues: ${{ steps.get_issues.outputs.issues }}"
-
+      #       if [ -z "$ISSUES" ]; then
+      #         echo "count=0" >> $GITHUB_OUTPUT
+      #       else
+      #         echo "count=$(echo "$ISSUES" | wc -w)" >> $GITHUB_OUTPUT
+      #         echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+      #       fi
 
       # - name: Close PR if no linked issue
       #   if: steps.validate.outputs.no_issue == 'true'
