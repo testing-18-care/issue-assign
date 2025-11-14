@@ -48,7 +48,7 @@ jobs:
             echo "no_issue=false" >> $GITHUB_OUTPUT
             echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
             echo "issue_url=https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-            ehco "there is issue"
+            echo "there is issue"
           fi
 
       # - name: Get linked issues
