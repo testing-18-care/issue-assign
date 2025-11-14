@@ -31,88 +31,112 @@ jobs:
       #       }
       #       core.setOutput("is_core", "false");
 
-      - name: Validate linked issue
-        #if: steps.check-core.outputs.is_core == 'false'
-        id: validate
-        run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
+      # - name: Validate linked issue
+      #   #if: steps.check-core.outputs.is_core == 'false'
+      #   id: validate
+      #   run: |
+      #     PR_BODY="${{ github.event.pull_request.body }}"
 
-          # Look for "Fixes #<number>", "Closes #<number>", or "Resolves #<number>"
-          ISSUE_REF=$(echo "$PR_BODY" | grep -Eo '(Fixes|Closes|Resolves)\s*#([0-9]+)' | head -n1 || true)
+      #     # Look for "Fixes #<number>", "Closes #<number>", or "Resolves #<number>"
+      #     ISSUE_REF=$(echo "$PR_BODY" | grep -Eo '(Fixes|Closes|Resolves)\s*#([0-9]+)' | head -n1 || true)
 
-          if [ -z "$ISSUE_REF" ]; then
-            echo "no_issue=true" >> $GITHUB_OUTPUT
-          else
-            ISSUE_NUMBER=$(echo "$ISSUE_REF" | grep -Eo '[0-9]+')
-            echo "no_issue=false" >> $GITHUB_OUTPUT
-            echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-            echo "issue_url=https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-          fi
+      #     if [ -z "$ISSUE_REF" ]; then
+      #       echo "no_issue=true" >> $GITHUB_OUTPUT
+      #     else
+      #       ISSUE_NUMBER=$(echo "$ISSUE_REF" | grep -Eo '[0-9]+')
+      #       echo "no_issue=false" >> $GITHUB_OUTPUT
+      #       echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+      #       echo "issue_url=https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+      #     fi
 
-      - name: Close PR if no linked issue
-        if: steps.validate.outputs.no_issue == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "No linked issue, please do not open PRs if there's no corresponding issue."
-          exit 0
-
-      - name: Validate linked issue actually exists
-        if: steps.validate.outputs.no_issue == 'false'
-        id: check_issue
+      - name: Get linked issues
+        id: get_issues
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ISSUE_NUMBER=${{ steps.validate.outputs.issue_number }}
+            PR=${{ github.event.pull_request.number }}
 
-          echo "Checking if issue #$ISSUE_NUMBER exists..."
-          if gh api --exit-status "repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >/dev/null 2>&1; then
-            exists=true
-          else
-            exists=false
-          fi
+            ISSUES=$(gh api \
+            repos/${{ github.repository }}/pulls/$PR \
+            --jq '.linked_issues.nodes[].number')
 
-          # Print to logs for debugging
-          echo "Issue existence check result: $exists"
+            if [ -z "$ISSUES" ]; then
+              echo "count=0" >> $GITHUB_OUTPUT
+            else
+              echo "count=$(echo "$ISSUES" | wc -w)" >> $GITHUB_OUTPUT
+              echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+            fi
 
-          # Export to GitHub Actions output
-          echo "exists=$exists" >> $GITHUB_OUTPUT
-
-
-      - name: Close PR if issue does not exist
-        if: steps.check_issue.outputs.exists == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Print issue numbers
         run: |
-          gh pr close ${{ github.event.pull_request.number }} \
-          --repo "$GITHUB_REPOSITORY" --comment "Invalid issue reference — the linked issue does not exist."
-          exit 0
+          echo "Linked issue count: ${{ steps.get_issues.outputs.count }}"
+          echo "Linked issues: ${{ steps.get_issues.outputs.issues }}"
 
-      - name: Get issue details
-        if: steps.validate.outputs.no_issue == 'false' && steps.check_issue.outputs.exists == 'true'
-        id: issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE_JSON=$(gh api "${{ steps.validate.outputs.issue_url }}" --jq '{assignee: .assignee.login}')
-          echo "issue_json=$ISSUE_JSON" >> $GITHUB_OUTPUT
-          ASSIGNEE=$(echo "$ISSUE_JSON" | jq -r '.assignee')
-          echo "assignee=$ASSIGNEE" >> $GITHUB_OUTPUT
 
-      - name: Close PR if issue unassigned
-        if: steps.issue.outputs.assignee == 'null' && steps.check-core.outputs.is_core == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is unassigned. Please refrain from opening PRs until issue is assigned to you."
-          exit 0
+      # - name: Close PR if no linked issue
+      #   if: steps.validate.outputs.no_issue == 'true'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.pull_request.number }}
+      #   run: |
+      #     gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "No linked issue, please do not open PRs if there's no corresponding issue."
+      #     exit 0
 
-      - name: Close PR if author not same as assignee
-        if: steps.issue.outputs.assignee != 'null' && steps.issue.outputs.assignee != github.event.pull_request.user.login && steps.check-core.outputs.is_core == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is assigned to someone else. Please refrain from opening PRs until issue is assigned to you."
+      # - name: Validate linked issue actually exists
+      #   if: steps.validate.outputs.no_issue == 'false'
+      #   id: check_issue
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     ISSUE_NUMBER=${{ steps.validate.outputs.issue_number }}
+
+      #     echo "Checking if issue #$ISSUE_NUMBER exists..."
+      #     if gh api --exit-status "repos/${{ github.repository }}/issues/$ISSUE_NUMBER" >/dev/null 2>&1; then
+      #       exists=true
+      #     else
+      #       exists=false
+      #     fi
+
+      #     # Print to logs for debugging
+      #     echo "Issue existence check result: $exists"
+
+      #     # Export to GitHub Actions output
+      #     echo "exists=$exists" >> $GITHUB_OUTPUT
+
+
+      # - name: Close PR if issue does not exist
+      #   if: steps.check_issue.outputs.exists == 'false'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     gh pr close ${{ github.event.pull_request.number }} \
+      #     --repo "$GITHUB_REPOSITORY" --comment "Invalid issue reference — the linked issue does not exist."
+      #     exit 0
+
+      # - name: Get issue details
+      #   if: steps.validate.outputs.no_issue == 'false' && steps.check_issue.outputs.exists == 'true'
+      #   id: issue
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     ISSUE_JSON=$(gh api "${{ steps.validate.outputs.issue_url }}" --jq '{assignee: .assignee.login}')
+      #     echo "issue_json=$ISSUE_JSON" >> $GITHUB_OUTPUT
+      #     ASSIGNEE=$(echo "$ISSUE_JSON" | jq -r '.assignee')
+      #     echo "assignee=$ASSIGNEE" >> $GITHUB_OUTPUT
+
+      # - name: Close PR if issue unassigned
+      #   if: steps.issue.outputs.assignee == 'null' && steps.check-core.outputs.is_core == 'false'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.pull_request.number }}
+      #   run: |
+      #     gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is unassigned. Please refrain from opening PRs until issue is assigned to you."
+      #     exit 0
+
+      # - name: Close PR if author not same as assignee
+      #   if: steps.issue.outputs.assignee != 'null' && steps.issue.outputs.assignee != github.event.pull_request.user.login && steps.check-core.outputs.is_core == 'false'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.pull_request.number }}
+      #   run: |
+      #     gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is assigned to someone else. Please refrain from opening PRs until issue is assigned to you."
