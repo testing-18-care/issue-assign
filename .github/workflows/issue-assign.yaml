@@ -137,10 +137,10 @@ jobs:
           gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is unassigned. Please refrain from opening PRs until issue is assigned to you."
           exit 0
 
-      # - name: Close PR if author not same as assignee
-      #   if: steps.issue.outputs.assignee != 'null' && steps.issue.outputs.assignee != github.event.pull_request.user.login && steps.check-core.outputs.is_core == 'false'
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     PR_NUMBER: ${{ github.event.pull_request.number }}
-      #   run: |
-      #     gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is assigned to someone else. Please refrain from opening PRs until issue is assigned to you."
+      - name: Close PR if author not same as assignee
+        if: steps.issue.outputs.assignee != 'null' && steps.issue.outputs.assignee != github.event.pull_request.user.login && steps.check-core.outputs.is_core == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is assigned to someone else. Please refrain from opening PRs until issue is assigned to you."
