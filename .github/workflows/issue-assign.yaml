@@ -109,16 +109,18 @@ jobs:
       #     --repo "$GITHUB_REPOSITORY" --comment "Invalid issue reference — the linked issue does not exist."
       #     exit 0
 
-      # - name: Get issue details
-      #   if: steps.validate.outputs.no_issue == 'false' && steps.check_issue.outputs.exists == 'true'
-      #   id: issue
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #     ISSUE_JSON=$(gh api "${{ steps.validate.outputs.issue_url }}" --jq '{assignee: .assignee.login}')
-      #     echo "issue_json=$ISSUE_JSON" >> $GITHUB_OUTPUT
-      #     ASSIGNEE=$(echo "$ISSUE_JSON" | jq -r '.assignee')
-      #     echo "assignee=$ASSIGNEE" >> $GITHUB_OUTPUT
+      - name: Get issue details
+        if: steps.validate.outputs.no_issue == 'false' #&& steps.check_issue.outputs.exists == 'true'
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_JSON=$(gh api "${{ steps.validate.outputs.issue_url }}" --jq '{assignee: .assignee.login}')
+          echo "$ISSUE_JSON"
+          echo "issue_json=$ISSUE_JSON" >> $GITHUB_OUTPUT
+          ASSIGNEE=$(echo "$ISSUE_JSON" | jq -r '.assignee')
+          echo "$ASSIGNEE"
+          echo "assignee=$ASSIGNEE" >> $GITHUB_OUTPUT
 
       # - name: Close PR if issue unassigned
       #   if: steps.issue.outputs.assignee == 'null' && steps.check-core.outputs.is_core == 'false'
