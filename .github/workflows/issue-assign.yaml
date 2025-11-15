@@ -99,11 +99,17 @@ jobs:
       #     # Export to GitHub Actions output
       #     echo "exists=$exists" >> $GITHUB_OUTPUT
 
-#       if gh api --exit-status "${{ steps.validate.outputs.issue_url }}" >/dev/null; then
-#   echo "Issue exists"
-# else
-#   echo "Issue does not exist"
-# fi
+      - name: Validate linked issue actually exists
+        if: steps.validate.outputs.no_issue == 'false'
+        id: check_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            if gh api --exit-status "${{ steps.validate.outputs.issue_url }}" >/dev/null; then
+              echo "Issue exists"
+            else
+              echo "Issue does not exist"
+            fi
 
 
       # - name: Close PR if issue does not exist
@@ -128,19 +134,19 @@ jobs:
           echo "$ASSIGNEE"
           echo "assignee=$ASSIGNEE" >> $GITHUB_OUTPUT
 
-      - name: Close PR if issue unassigned
-        if: steps.issue.outputs.assignee == 'null' #&& steps.check-core.outputs.is_core == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is unassigned. Please refrain from opening PRs until issue is assigned to you."
-          exit 0
+      # - name: Close PR if issue unassigned
+      #   if: steps.issue.outputs.assignee == 'null' #&& steps.check-core.outputs.is_core == 'false'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.pull_request.number }}
+      #   run: |
+      #     gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is unassigned. Please refrain from opening PRs until issue is assigned to you."
+      #     exit 0
 
-      - name: Close PR if author not same as assignee
-        if: steps.issue.outputs.assignee != 'null' && steps.issue.outputs.assignee != github.event.pull_request.user.login #&& steps.check-core.outputs.is_core == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is assigned to someone else. Please refrain from opening PRs until issue is assigned to you."
+      # - name: Close PR if author not same as assignee
+      #   if: steps.issue.outputs.assignee != 'null' && steps.issue.outputs.assignee != github.event.pull_request.user.login #&& steps.check-core.outputs.is_core == 'false'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.pull_request.number }}
+      #   run: |
+      #     gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "PR is assigned to someone else. Please refrain from opening PRs until issue is assigned to you."
