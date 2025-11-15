@@ -102,14 +102,13 @@ jobs:
       - name: Validate issue exists
         run: |
           ISSUE_NUMBER=${{ steps.validate.outputs.issue_number }}
-          STATUS=$(gh api -i "repos/${{ github.repository }}/issues/$ISSUE_NUMBER" 2>/dev/null | head -n 1)
 
-          if echo "$STATUS" | grep -q "200"; then
+          if gh api "repos/${{ github.repository }}/issues/$ISSUE_NUMBER" --silent >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "exist=true"
+            echo "exists=true"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "exist=false"
+            echo "exists=false"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
