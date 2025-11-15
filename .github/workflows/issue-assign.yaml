@@ -99,17 +99,18 @@ jobs:
       #     # Export to GitHub Actions output
       #     echo "exists=$exists" >> $GITHUB_OUTPUT
 
-      - name: Validate linked issue actually exists
-        if: steps.validate.outputs.no_issue == 'false'
-        id: check_issue
+      - name: Validate issue exists
+        run: |
+          ISSUE_NUMBER=${{ steps.validate.outputs.issue_number }}
+          STATUS=$(gh api -i "repos/${{ github.repository }}/issues/$ISSUE_NUMBER" 2>/dev/null | head -n 1)
+
+          if echo "$STATUS" | grep -q "200"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-            if gh api -i "repos/testing-18-care/issue-assign/issues/1" 2>/dev/null | grep -q "200 OK"; then
-              echo "Issue exists"
-            else
-              echo "Issue does NOT exist"
-            fi
 
 
       # - name: Close PR if issue does not exist
