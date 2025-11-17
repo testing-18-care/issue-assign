@@ -76,7 +76,7 @@ jobs:
       #       core.setOutput("is_core", "false");
 
       - name: Get issue details
-        if: steps.validate.outputs.no_issue == 'false' && steps.check_issue.outputs.exists == 'true'
+        if: steps.validate.outputs.no_issue == 'false'
         id: issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
