@@ -167,8 +167,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_STATE: ${{ steps.prinfo.outputs.state }}
         run: |
-          if [ steps.prinfo.outputs.state == "CLOSED" ]; then
+          if [ "$PR_STATE" = "CLOSED" ]; then
             gh pr reopen "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "Issue linked now — reopening PR."
           else
             echo "PR already open, nothing to do."
