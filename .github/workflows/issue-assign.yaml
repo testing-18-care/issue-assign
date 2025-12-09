@@ -177,7 +177,8 @@ jobs:
 
       - name: Validate PR assignment
         if: steps.prinfo.outputs.pr_association != 'MEMBER' && steps.prinfo.outputs.pr_association != 'OWNER'
-
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
             PR_AUTHOR="${{ steps.prinfo.outputs.pr_author }}"
             ASSIGNEES="${{ steps.prinfo.outputs.assignees }}"
