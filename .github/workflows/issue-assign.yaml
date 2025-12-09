@@ -174,3 +174,28 @@ jobs:
           else
             echo "PR already open, nothing to do."
           fi
+
+      - name: Validate PR assignment
+        if: steps.prinfo.outputs.pr_association != 'MEMBER' && steps.prinfo.outputs.pr_association != 'OWNER'
+
+        run: |
+            PR_AUTHOR="${{ steps.prinfo.outputs.pr_author }}"
+            ASSIGNEES="${{ steps.prinfo.outputs.assignees }}"
+
+            # Check if no assignee
+            if [ -z "$ASSIGNEES" ]; then
+              echo "PR is unassigned, closing..."
+              gh pr close "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" \
+              --comment "PR is unassigned. Please refrain from opening PRs until the issue is assigned to you."
+              exit 0
+            fi
+
+            # Check if PR author is not among assignees
+            if ! echo "$ASSIGNEES" | grep -qw "$PR_AUTHOR"; then
+              echo "PR author is not the assignee, closing..."
+              gh pr close "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" \
+              --comment "PR is assigned to someone else. Please refrain from opening PRs until the issue is assigned to you."
+              exit 0
+            fi
+
+            echo "PR author is assigned to the issue, all good."
